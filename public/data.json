@@ -1,0 +1,129 @@
+{
+  "benchmarks": [
+    {
+      "name": "MMLU 5-Shot",
+      "data": [
+        {
+          "date": "2022-04",
+          "name": "PaLM",
+          "params": null,
+          "author": "Google",
+          "openClosed": "Closed",
+          "score": 0.67
+        },
+        {
+          "date": "2022-10",
+          "name": "Flan-PaLM",
+          "params": null,
+          "author": "Google",
+          "openClosed": "Closed",
+          "score": 0.75
+        },
+        {
+          "date": "2022-10",
+          "name": "Flan-T5",
+          "params": 11,
+          "author": "Google",
+          "openClosed": "Open",
+          "score": 0.55
+        },
+        {
+          "date": "2023-03",
+          "name": "LLaMA",
+          "params": 65,
+          "author": "Meta",
+          "openClosed": "Open",
+          "score": 0.64
+        },
+        {
+          "date": "2023-04",
+          "name": "GPT-4",
+          "params": null,
+          "author": "OpenAI",
+          "openClosed": "Closed",
+          "score": 0.86
+        },
+        {
+          "date": "2023-05",
+          "name": "Claude 1.3",
+          "params": null,
+          "author": "Anthropic",
+          "openClosed": "Closed",
+          "score": 0.76
+        },
+        {
+          "date": "2023-07",
+          "name": "Claude 2",
+          "params": null,
+          "author": "Anthropic",
+          "openClosed": "Closed",
+          "score": 0.78
+        },
+        {
+          "date": "2023-10",
+          "name": "LLaMA 2",
+          "params": 70,
+          "author": "Meta",
+          "openClosed": "Open",
+          "score": 0.70
+        },
+        {
+          "date": "2023-12",
+          "name": "Falcon",
+          "params": 180,
+          "author": "TII",
+          "openClosed": "Open",
+          "score": 0.71
+        },
+        {
+          "date": "2023-12",
+          "name": "Yi",
+          "params": 34,
+          "author": "01.ai",
+          "openClosed": "Open",
+          "score": 0.76
+        },
+        {
+          "date": "2024-01",
+          "name": "Mistral 8x7",
+          "params": 56,
+          "author": "Mistral",
+          "openClosed": "Open",
+          "score": 0.72
+        },
+        {
+          "date": "2024-01",
+          "name": "Gemini Ultra",
+          "params": null,
+          "author": "Google",
+          "openClosed": "Closed",
+          "score": 0.84
+        },
+        {
+          "date": "2024-03",
+          "name": "Claude 3 Opus",
+          "params": null,
+          "author": "Anthropic",
+          "openClosed": "Closed",
+          "score": 0.87
+        },
+        {
+          "date": "2024-04",
+          "name": "Command R+",
+          "params": 110,
+          "author": "Cohere",
+          "openClosed": "Open",
+          "score": 0.76
+        },
+        {
+          "date": "2024-04",
+          "name": "Mixtral 8x22",
+          "params": 176,
+          "author": "Mistral",
+          "openClosed": "Open",
+          "score": 0.78
+        }
+      ]
+    }
+  ]
+}
