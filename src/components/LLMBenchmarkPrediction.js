@@ -4,11 +4,15 @@ const LLMBenchmarkPrediction = ({ data }) => {
   const [predictions, setPredictions] = useState([]);
 
   useEffect(() => {
-    // Calculate predictions
     const calculatePredictions = () => {
+      console.log("Raw data for predictions:", data);
+      if (!data || !data.benchmarks || !data.benchmarks[0] || !data.benchmarks[0].data) {
+        console.error("Data is not in the expected format for predictions");
+        return;
+      }
       const sortedData = data.benchmarks[0].data.sort((a, b) => new Date(a.date) - new Date(b.date));
+      console.log("Sorted data for predictions:", sortedData);
 
-      // Simple linear regression
       const linearRegression = (data, openClosed) => {
         const filteredData = data.filter(item => item.openClosed === openClosed);
         const x = filteredData.map((_, i) => i);
@@ -23,7 +27,7 @@ const LLMBenchmarkPrediction = ({ data }) => {
         const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
         const intercept = (sumY - slope * sumX) / n;
 
-        return (x) => slope * x + intercept;
+        return (x) => Math.min(Math.max(slope * x + intercept, 0), 1);
       };
 
       const openPredictor = linearRegression(sortedData, 'Open');
@@ -38,15 +42,20 @@ const LLMBenchmarkPrediction = ({ data }) => {
 
       const newPredictions = predictedDates.map((date, index) => ({
         date,
-        openPrediction: Math.min(Math.max(openPredictor(sortedData.length + index), 0), 1),
-        closedPrediction: Math.min(Math.max(closedPredictor(sortedData.length + index), 0), 1),
+        openPrediction: openPredictor(sortedData.length + index),
+        closedPrediction: closedPredictor(sortedData.length + index),
       }));
 
+      console.log("Calculated predictions:", newPredictions);
       setPredictions(newPredictions);
     };
 
     calculatePredictions();
   }, [data]);
+
+  if (predictions.length === 0) {
+    return <div>No predictions available</div>;
+  }
 
   return (
     <div className="mt-8">

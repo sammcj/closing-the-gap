@@ -1,27 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import LLMBenchmarkVisualization from './components/LLMBenchmarkVisualization';
-import LLMBenchmarkPrediction from './components/LLMBenchmarkPrediction';
 
-const LLMBenchmarkApp = () => {
+function App() {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/data.json');
+    fetch('/data.json')
+      .then(response => {
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error('Network response was not ok');
         }
-        const jsonData = await response.json();
-        setData(jsonData);
-      } catch (error) {
+        return response.json();
+      })
+      .then(data => setData(data))
+      .catch(error => {
         console.error('Error fetching data:', error);
         setError('Failed to load data. Please try again later.');
-      }
-    };
-
-    fetchData();
+      });
   }, []);
 
   if (error) {
@@ -36,9 +32,8 @@ const LLMBenchmarkApp = () => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-8">LLM Benchmark Visualization</h1>
       <LLMBenchmarkVisualization data={data} />
-      <LLMBenchmarkPrediction data={data} />
     </div>
   );
-};
+}
 
-export default LLMBenchmarkApp;
+export default App;
