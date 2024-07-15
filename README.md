@@ -1,6 +1,8 @@
 # LLM Benchmark Visualisations
 
-**!!DISCLAIMER: This is work in progress experiment in early alpha stages, there's a lot of work to be done to make this a useful tool!!**
+**!! DISCLAIMER: This is work in progress experiment in early alpha stages, there's a lot of work to be done to make this a useful tool !!**
+
+---
 
 This project is designed to visualise and track the performance of various Large Language Models (LLMs) across different benchmarks. The visualisations aim help in understanding trends, comparing models, and predicting future performances.
 
