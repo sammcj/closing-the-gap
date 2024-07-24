@@ -1,199 +1,203 @@
 const express = require('express');
-const fs = require('fs').promises;
 const path = require('path');
+const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs').promises;
 const app = express();
-const port = 3001;
+const port = process.env.PORT || 3001;
+const dbPath = process.env.DB_PATH || './llm_benchmarks.db';
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Create a database connection
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) {
+    console.error('Error opening database', err);
+  } else {
+    console.log('Connected to the SQLite database.');
+  }
+});
 
-// GET endpoint to check if files can be read
+// Promisify database methods
+const dbRun = (sql, params) => new Promise((resolve, reject) => {
+  db.run(sql, params, function (err) {
+    if (err) reject(err);
+    else resolve(this);
+  });
+});
+
+const dbGet = (sql, params) => new Promise((resolve, reject) => {
+  db.get(sql, params, (err, row) => {
+    if (err) reject(err);
+    else resolve(row);
+  });
+});
+
+const dbAll = (sql, params) => new Promise((resolve, reject) => {
+  db.all(sql, params, (err, rows) => {
+    if (err) reject(err);
+    else resolve(rows);
+  });
+});
+
+// GET endpoint for checkFiles
 app.get('/api/checkFiles', async (req, res) => {
   try {
-    const modelsPath = path.join(__dirname, 'public', 'models.json');
-    const resultsPath = path.join(__dirname, 'public', 'results.json');
-
-    console.log('Attempting to read files:');
-    console.log('Models path:', modelsPath);
-    console.log('Results path:', resultsPath);
-
-    const [models, results] = await Promise.all([
-      fs.readFile(modelsPath, 'utf-8'),
-      fs.readFile(resultsPath, 'utf-8')
-    ]);
-
-    console.log('Files read successfully');
-
-    res.json({
-      message: 'Files read successfully',
-      modelCount: JSON.parse(models).length,
-      resultCount: JSON.parse(results).length
-    });
-  } catch (error) {
-    console.error('Error reading files:', error);
-    console.error('Error stack:', error.stack);
-    res.status(500).json({ error: 'Failed to read files', details: error.message, stack: error.stack });
+    await fs.access(dbPath);
+    res.json({ message: 'Database file exists' });
+  } catch (err) {
+    res.status(500).json({ error: 'Database file not found', details: err.message });
   }
 });
 
+// GET endpoint to check if database is accessible
+app.get('/api/checkDatabase', async (req, res) => {
+  try {
+    const result = await dbGet("SELECT name FROM sqlite_master WHERE type='table' AND name='models'");
+    res.json({ message: 'Database is accessible', tableExists: !!result });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to query database', details: err.message });
+  }
+});
 
+// GET endpoint to fetch all data
+app.get('/api/getAllData', async (req, res) => {
+  try {
+    const models = await dbAll("SELECT * FROM models");
+    const benchmarks = await dbAll("SELECT * FROM benchmarks");
+    const results = await dbAll("SELECT * FROM results");
+    res.json({ models, benchmarks, results });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch data', details: err.message });
+  }
+});
+
+// POST endpoint to save benchmark data
 app.post('/api/saveBenchmarkData', async (req, res) => {
-  console.log('Received POST request to /api/saveBenchmarkData');
+  const { modelName, benchmarkId, score, date, openClosed } = req.body;
+
+  if (!modelName || !benchmarkId || !score || !date || !openClosed) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
   try {
-    const { modelName, benchmarkId, score, date, openClosed } = req.body;
-    console.log('Received data:', { modelName, benchmarkId, score, date, openClosed });
+    await dbRun("BEGIN TRANSACTION");
 
-    const modelsPath = path.join(__dirname, 'public', 'models.json');
-    const resultsPath = path.join(__dirname, 'public', 'results.json');
+    let model = await dbGet("SELECT * FROM models WHERE name = ?", modelName);
+    let modelId;
 
-    console.log('File paths:', { modelsPath, resultsPath });
-
-    let models, results;
-    try {
-      [models, results] = await Promise.all([
-        fs.readFile(modelsPath, 'utf-8').then(JSON.parse),
-        fs.readFile(resultsPath, 'utf-8').then(JSON.parse),
-      ]);
-      console.log('Files read successfully');
-    } catch (readError) {
-      console.error('Error reading files:', readError);
-      throw new Error(`Failed to read files: ${readError.message}`);
+    if (!model) {
+      const result = await dbRun("INSERT INTO models (name, openClosed) VALUES (?, ?)", [modelName, openClosed]);
+      modelId = result.lastID;
+    } else {
+      modelId = model.id;
     }
 
-    if (!models.find(m => m.name === modelName)) {
-      console.log('Adding new model:', modelName);
-      models.push({ name: modelName, params: null, author: 'Unknown', openClosed });
-      try {
-        await fs.writeFile(modelsPath, JSON.stringify(models, null, 2));
-        console.log('Updated models file');
-      } catch (writeError) {
-        console.error('Error writing to models file:', writeError);
-        throw new Error(`Failed to write to models file: ${writeError.message}`);
-      }
-    }
+    await dbRun("INSERT INTO results (date, modelId, benchmarkId, score) VALUES (?, ?, ?, ?)",
+      [date, modelId, benchmarkId, score]);
 
-    console.log('Adding new result');
-    results.push({ date, modelName, benchmarkId, score });
-    try {
-      await fs.writeFile(resultsPath, JSON.stringify(results, null, 2));
-      console.log('Updated results file');
-    } catch (writeError) {
-      console.error('Error writing to results file:', writeError);
-      throw new Error(`Failed to write to results file: ${writeError.message}`);
-    }
-
+    await dbRun("COMMIT");
     res.json({ message: 'Data saved successfully' });
-  } catch (error) {
-    console.error('Error in /api/saveBenchmarkData:', error);
-    res.status(500).json({ error: 'Failed to save data', details: error.message });
+  } catch (err) {
+    await dbRun("ROLLBACK");
+    res.status(500).json({ error: 'Failed to save data', details: err.message });
   }
 });
 
-
+// POST endpoint to delete model data
 app.post('/api/deleteModelData', async (req, res) => {
+  const { modelNames } = req.body;
+
+  if (!Array.isArray(modelNames) || modelNames.length === 0) {
+    return res.status(400).json({ error: 'Invalid input' });
+  }
+
   try {
-    const { modelNames } = req.body;
-    const modelsPath = path.join(__dirname, 'public', 'models.json');
-    const resultsPath = path.join(__dirname, 'public', 'results.json');
+    await dbRun("BEGIN TRANSACTION");
 
-    let [models, results] = await Promise.all([
-      fs.readFile(modelsPath, 'utf-8').then(JSON.parse),
-      fs.readFile(resultsPath, 'utf-8').then(JSON.parse),
-    ]);
+    const placeholders = modelNames.map(() => '?').join(',');
+    const result = await dbRun(`DELETE FROM models WHERE name IN (${placeholders})`, modelNames);
 
-    // Remove models
-    models = models.filter(model => !modelNames.includes(model.name));
-
-    // Remove results for the deleted models
-    results = results.filter(result => !modelNames.includes(result.modelName));
-
-    await Promise.all([
-      fs.writeFile(modelsPath, JSON.stringify(models, null, 2)),
-      fs.writeFile(resultsPath, JSON.stringify(results, null, 2)),
-    ]);
-
-    res.json({ message: 'Data deleted successfully' });
-  } catch (error) {
-    console.error('Error in /api/deleteModelData:', error);
-    res.status(500).json({ error: 'Failed to delete data', details: error.message });
+    await dbRun("COMMIT");
+    res.json({ message: `${result.changes} models deleted successfully` });
+  } catch (err) {
+    await dbRun("ROLLBACK");
+    res.status(500).json({ error: 'Failed to delete models', details: err.message });
   }
 });
 
+// POST endpoint to add a new benchmark
 app.post('/api/addBenchmark', async (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Benchmark name is required' });
+  }
+
   try {
-    const { name } = req.body;
-    const benchmarksPath = path.join(__dirname, 'public', 'benchmarks.json');
-
-    let benchmarks = await fs.readFile(benchmarksPath, 'utf-8').then(JSON.parse);
-
-    const newBenchmark = {
-      id: Date.now().toString(36) + Math.random().toString(36).substr(2, 5),
-      name: name
-    };
-
-    benchmarks.push(newBenchmark);
-
-    await fs.writeFile(benchmarksPath, JSON.stringify(benchmarks, null, 2));
-
-    res.json({ message: 'Benchmark added successfully', benchmark: newBenchmark });
-  } catch (error) {
-    console.error('Error in /api/addBenchmark:', error);
-    res.status(500).json({ error: 'Failed to add benchmark', details: error.message });
+    const result = await dbRun("INSERT INTO benchmarks (name) VALUES (?)", [name]);
+    res.json({ message: 'Benchmark added successfully', benchmark: { id: result.lastID, name } });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to add benchmark', details: err.message });
   }
 });
 
+// POST endpoint to delete a benchmark
 app.post('/api/deleteBenchmark', async (req, res) => {
+  const { name } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: 'Benchmark name is required' });
+  }
+
   try {
-    const { name } = req.body;
-    const benchmarksPath = path.join(__dirname, 'public', 'benchmarks.json');
-    const resultsPath = path.join(__dirname, 'public', 'results.json');
+    await dbRun("BEGIN TRANSACTION");
 
-    let [benchmarks, results] = await Promise.all([
-      fs.readFile(benchmarksPath, 'utf-8').then(JSON.parse),
-      fs.readFile(resultsPath, 'utf-8').then(JSON.parse),
-    ]);
+    await dbRun("DELETE FROM benchmarks WHERE name = ?", [name]);
+    await dbRun("DELETE FROM results WHERE benchmarkId NOT IN (SELECT id FROM benchmarks)");
 
-    const benchmarkToDelete = benchmarks.find(b => b.name === name);
-    if (!benchmarkToDelete) {
-      return res.status(404).json({ error: 'Benchmark not found' });
-    }
-    benchmarks = benchmarks.filter(b => b.name !== name);
-    results = results.filter(r => r.benchmarkId !== benchmarkToDelete.id);
-
-    await Promise.all([
-      fs.writeFile(benchmarksPath, JSON.stringify(benchmarks, null, 2)),
-      fs.writeFile(resultsPath, JSON.stringify(results, null, 2)),
-    ]);
-
-    res.json({ message: 'Benchmark deleted successfully' });
-  } catch (error) {
-    console.error('Error in /api/deleteBenchmark:', error);
-    res.status(500).json({ error: 'Failed to delete benchmark', details: error.message });
+    await dbRun("COMMIT");
+    res.json({ message: 'Benchmark and related results deleted successfully' });
+  } catch (err) {
+    await dbRun("ROLLBACK");
+    res.status(500).json({ error: 'Failed to delete benchmark', details: err.message });
   }
 });
 
+// POST endpoint to create a backup
 app.post('/api/backup', async (req, res) => {
+  const backupDir = path.join(__dirname, 'backups', new Date().toISOString().replace(/:/g, '-'));
+  const backupFile = path.join(backupDir, 'llm_benchmarks_backup.db');
+
   try {
-    const backupDir = path.join(__dirname, 'backups', new Date().toISOString().replace(/:/g, '-'));
     await fs.mkdir(backupDir, { recursive: true });
-
-    const files = ['models.json', 'benchmarks.json', 'results.json'];
-    await Promise.all(files.map(file =>
-      fs.copyFile(
-        path.join(__dirname, 'public', file),
-        path.join(backupDir, file)
-      )
-    ));
-
-    console.log('Backup created successfully:', backupDir);
-    res.json({ message: 'Backup created successfully', backupDir });
-  } catch (error) {
-    console.error('Error in /api/backup:', error);
-    res.status(500).json({ error: 'Failed to create backup', details: error.message });
+    await dbRun("VACUUM INTO ?", backupFile);
+    res.json({ message: 'Backup created successfully', backupFile });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create backup', details: err.message });
   }
 });
 
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ error: 'Something went wrong!', details: err.message });
+});
+
+// Start the server
 app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
+});
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down gracefully...');
+  db.close((err) => {
+    if (err) {
+      console.error('Error closing database', err);
+    } else {
+      console.log('Database connection closed.');
+    }
+    process.exit(0);
+  });
 });

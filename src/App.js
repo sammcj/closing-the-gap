@@ -36,19 +36,13 @@ function App() {
 
   const fetchData = async () => {
     try {
-      const [modelsResponse, benchmarksResponse, resultsResponse] = await Promise.all([
-        fetch('/models.json'),
-        fetch('/benchmarks.json'),
-        fetch('/results.json')
-      ]);
+      const response = await fetch('/api/getAllData');
 
-      if (!modelsResponse.ok || !benchmarksResponse.ok || !resultsResponse.ok) {
-        throw new Error('One or more files failed to load');
+      if (!response.ok) {
+        throw new Error('Failed to load data');
       }
 
-      const models = await modelsResponse.json();
-      const benchmarks = await benchmarksResponse.json();
-      const results = await resultsResponse.json();
+      const { models, benchmarks, results } = await response.json();
 
       console.log('Fetched data:', { models, benchmarks, results });
 
@@ -63,10 +57,10 @@ function App() {
             min,
             max,
             data: benchmarkResults.map(result => {
-              const model = models.find(m => m.name === result.modelName);
+              const model = models.find(m => m.id === result.modelId);
               return {
                 date: result.date,
-                name: result.modelName,
+                name: model ? model.name : 'Unknown',
                 params: model ? model.params : null,
                 author: model ? model.author : 'Unknown',
                 openClosed: model ? model.openClosed : 'Unknown',

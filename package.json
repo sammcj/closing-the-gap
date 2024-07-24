@@ -17,7 +17,9 @@
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
-    "tailwindcss": "3.4.6"
+    "tailwindcss": "3.4.6",
+    "sqlite3": "^5.1.7",
+    "sqlite": "^4.2.1"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
