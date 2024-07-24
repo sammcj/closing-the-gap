@@ -1675,7 +1675,7 @@
   },
   {
     "date": "2024-07",
-    "modelName": "Claude-3-Opus-20240229",
+    "modelName": "Claude-3-Opus",
     "benchmarkId": "bigcode_complete",
     "score": 57.4
   },
@@ -1747,7 +1747,7 @@
   },
   {
     "date": "2024-07",
-    "modelName": "Claude-3-Opus-20240229",
+    "modelName": "Claude-3-Opus",
     "benchmarkId": "bigcode_elo_mle",
     "score": 45.5
   },

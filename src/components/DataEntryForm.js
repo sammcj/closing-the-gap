@@ -41,6 +41,18 @@ const DataEntryForm = ({ onNewData, onClose }) => {
       score: parseFloat(score),
       openClosed
     };
+
+    if (!newData.date) {
+      newData.date = new Date().toISOString().slice(0, 7);
+    }
+    // validate the data
+    if (!newData.modelName || !newData.benchmarkId || !newData.score || !newData.openClosed) {
+      console.error('Invalid data:', newData);
+      return;
+    }
+
+    localStorage.setItem('lastInputData', JSON.stringify(newData));
+
     console.log('Submitting new data:', newData);
     onNewData(newData);
   };
@@ -56,10 +68,11 @@ const DataEntryForm = ({ onNewData, onClose }) => {
             <input
               type="text"
               className="w-full p-2 border rounded"
+              placeholder={JSON.parse(localStorage.getItem('lastInputData'))?.date || new Date().toISOString().slice(0, 7)}
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              required
             />
+            <small className="text-gray-500">Leave empty to use current date</small>
           </div>
           <div className="mb-4">
             <label className="block mb-2">Model:</label>
@@ -68,7 +81,8 @@ const DataEntryForm = ({ onNewData, onClose }) => {
               className="w-full p-2 border rounded"
               value={modelName}
               onChange={(e) => setModelName(e.target.value)}
-              required
+              // pre-fill with last input data
+              placeholder={JSON.parse(localStorage.getItem('lastInputData'))?.modelName || ''}
             />
             <datalist id="existing-models">
               {existingModels.map(m => <option key={m} value={m} />)}
@@ -105,9 +119,10 @@ const DataEntryForm = ({ onNewData, onClose }) => {
               className="w-full p-2 border rounded"
               value={openClosed}
               onChange={(e) => setOpenClosed(e.target.value)}
+              placeholder={JSON.parse(localStorage.getItem('lastInputData'))?.openClosed || ''}
               required
             >
-              <option value="">Select Open/Closed</option>
+              <option value="">Select</option>
               <option value="Open">Open</option>
               <option value="Closed">Closed</option>
             </select>
