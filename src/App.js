@@ -46,17 +46,28 @@ function App() {
 
       console.log('Fetched data:', { models, benchmarks, results });
 
+      // Process the fetched data
       const processedData = {
         benchmarks: benchmarks.map(benchmark => {
           const benchmarkResults = results.filter(result => result.benchmarkId === benchmark.id);
           const scores = benchmarkResults.map(r => r.score);
           const min = Math.min(...scores);
           const max = Math.max(...scores);
+
           return {
             name: benchmark.name,
             min,
             max,
-            data: benchmarkResults.map(result => {
+            data: benchmarkResults
+              .filter(result =>
+                models.find(m => m.id === result.modelId)
+                  ? (
+                    models.openClosed === 'Open' || models.openClosed === 'Closed'
+                  )
+                  : true
+              )
+              .map(result => {
+            // Ensure that we join the 'results' table with the 'models' table using result.modelId
               const model = models.find(m => m.id === result.modelId);
               return {
                 date: result.date,

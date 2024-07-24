@@ -63,7 +63,6 @@ function importData() {
     // Import models
     const stmtModel = db.prepare("INSERT OR IGNORE INTO models (name, params, author, openClosed) VALUES (?, ?, ?, ?)");
     modelsData.forEach((model) => {
-      console.log('Inserting model:', model);
       stmtModel.run(model.name, model.params, model.author, model.openClosed, (err) => {
         if (err) console.error('Error inserting model:', model.name, err);
       });
@@ -73,7 +72,6 @@ function importData() {
     // Import benchmarks
     const stmtBenchmark = db.prepare("INSERT OR IGNORE INTO benchmarks (id, name) VALUES (?, ?)");
     benchmarksData.forEach((benchmark) => {
-      console.log('Inserting benchmark:', benchmark);
       stmtBenchmark.run(benchmark.id, benchmark.name, (err) => {
         if (err) console.error('Error inserting benchmark:', benchmark.name, err);
       });
@@ -81,10 +79,9 @@ function importData() {
     stmtBenchmark.finalize();
 
     // Import results
-    const stmtResult = db.prepare("INSERT OR IGNORE INTO results (date, modelName, benchmarkId, score) VALUES (?, ?, ?, ?)");
+    const stmtResult = db.prepare("INSERT INTO results (date, modelName, benchmarkId, score) VALUES (?, ?, ?, ?)");
     resultsData.forEach((result) => {
-      console.log('Inserting result:', result);
-      stmtResult.run(result.date, result.modelName, result.benchmarkId, result.score, (err) => {
+      stmtResult.run(result.date, result.name, result.benchmarkId, result.score, (err) => {
         if (err) console.error('Error inserting result:', result, err);
       });
     });

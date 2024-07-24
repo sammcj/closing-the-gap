@@ -1,5 +1,5 @@
 const config = {
-  predictionMonths: 12,
+  predictionMonths: 6,
   trendDataPoints: 12,
   openColor: 'rgb(75, 192, 192)',
   closedColor: 'rgb(255, 99, 132)',

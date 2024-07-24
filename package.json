@@ -5,21 +5,23 @@
   "dependencies": {
     "autoprefixer": "10.4.19",
     "chart.js": "4.4.3",
+    "chartjs-adapter-date-fns": "3.0.0",
     "chartjs-plugin-annotation": "3.0.1",
     "chartjs-plugin-autocolors": "0.2.2",
     "chartjs-plugin-datalabels": "2.2.0",
     "chartjs-plugin-trendline": "2.1.2",
     "concurrently": "8.2.2",
     "cors": "2.8.5",
+    "date-fns": "3.6.0",
     "express": "^4.19.2",
     "postcss": "8.4.39",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.3.1",
     "react-scripts": "5.0.1",
-    "tailwindcss": "3.4.6",
+    "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7",
-    "sqlite": "^4.2.1"
+    "tailwindcss": "3.4.6"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

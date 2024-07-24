@@ -66,8 +66,14 @@ app.get('/api/getAllData', async (req, res) => {
     const models = await dbAll("SELECT * FROM models");
     const benchmarks = await dbAll("SELECT * FROM benchmarks");
     const results = await dbAll("SELECT * FROM results");
+
+    console.log('Models:', models);
+    console.log('Benchmarks:', benchmarks);
+    console.log('Results:', results);
+
     res.json({ models, benchmarks, results });
   } catch (err) {
+    console.error('Error fetching data:', err);
     res.status(500).json({ error: 'Failed to fetch data', details: err.message });
   }
 });
