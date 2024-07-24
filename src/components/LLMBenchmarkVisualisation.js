@@ -165,7 +165,7 @@ const LLMBenchmarkVisualisation = ({ data }) => {
   };
 
   return (
-    <div className="w-full h-[600px]">
+    <div className="w-full h-[400px]">
       <Line data={chartData} options={options} />
     </div>
   );

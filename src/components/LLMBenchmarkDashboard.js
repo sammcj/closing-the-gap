@@ -38,13 +38,13 @@ const LLMBenchmarkDashboard = ({ data }) => {
   console.log('Processed averageData:', averageData);
 
   return (
-    <div className="flex flex-col space-y-8">
+    <div className="flex flex-col space-y-4">
       <div id="average-graph">
         <LLMBenchmarkVisualisation data={averageData} />
       </div>
       <div className="flex flex-wrap">
         {data.benchmarks.map((benchmark, index) => (
-          <div key={index} className="w-1/2 p-4">
+          <div key={index} className="w-1/2 p-1">
             <LLMBenchmarkVisualisation
               data={{ benchmarks: [benchmark] }}
             />
@@ -53,7 +53,7 @@ const LLMBenchmarkDashboard = ({ data }) => {
       </div>
       <div className="flex flex-wrap">
         {data.benchmarks.map((benchmark, index) => (
-          <div key={index} className="w-1/2 p-4">
+          <div key={index} className="w-1/2 p-1">
             <LLMBenchmarkVisualisation
               data={{ benchmarks: [{ ...benchmark, data: benchmark.data.map(d => ({ ...d, score: null })) }] }} // Passing empty scores for predictions
             />
