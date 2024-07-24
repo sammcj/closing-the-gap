@@ -44,12 +44,20 @@ function App() {
 
       const { models, benchmarks, results } = await response.json();
 
-      console.log('Fetched data:', { models, benchmarks, results });
+      console.log('Fetched models:', models);
+      console.log('Fetched benchmarks:', benchmarks);
+      console.log('Fetched results:', results);
 
       // Process the fetched data
       const processedData = {
         benchmarks: benchmarks.map(benchmark => {
           const benchmarkResults = results.filter(result => result.benchmarkId === benchmark.id);
+
+          // Log benchmarkResults to ensure they are being populated
+          console.log(`Benchmark Results for ${benchmark.name}:`, benchmarkResults);
+
+          if (benchmarkResults.length === 0) return null; // Skip if no results
+
           const scores = benchmarkResults.map(r => r.score);
           const min = Math.min(...scores);
           const max = Math.max(...scores);
@@ -59,29 +67,24 @@ function App() {
             min,
             max,
             data: benchmarkResults
-              .filter(result =>
-                models.find(m => m.id === result.modelId)
-                  ? (
-                    models.openClosed === 'Open' || models.openClosed === 'Closed'
-                  )
-                  : true
-              )
               .map(result => {
-            // Ensure that we join the 'results' table with the 'models' table using result.modelId
-              const model = models.find(m => m.id === result.modelId);
-              return {
-                date: result.date,
-                name: model ? model.name : 'Unknown',
-                params: model ? model.params : null,
-                author: model ? model.author : 'Unknown',
-                openClosed: model ? model.openClosed : 'Unknown',
-                score: result.score,
-                normalizedScore: normalizeScore(result.score, min, max)
-              };
-            })
+                const model = models.find(m => m.name === result.modelName); // Match by name instead of id
+                return model ? {
+                  date: result.date,
+                  name: model.name,
+                  params: model.params,
+                  author: model.author,
+                  openClosed: model.openClosed,
+                  score: result.score,
+                  normalizedScore: normalizeScore(result.score, min, max)
+                } : null; // Return null if no matching model found
+              })
+              .filter(item => item !== null) // Filter out any null items
           };
-        }).filter(benchmark => benchmark.data.length > 0)
+        }).filter(benchmark => benchmark !== null && benchmark.data.length > 0)
       };
+
+      console.log('Processed Data:', processedData); // Log processed data
 
       setData(processedData);
     } catch (error) {
@@ -89,6 +92,7 @@ function App() {
       setError(`Failed to load data: ${error.message}. Please check your network connection and make sure the server is running.`);
     }
   };
+
 
   const handleNewData = async (newData) => {
     try {

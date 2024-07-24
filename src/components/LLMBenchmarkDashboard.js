@@ -2,7 +2,7 @@ import React from 'react';
 import LLMBenchmarkVisualisation from './LLMBenchmarkVisualisation';
 
 const LLMBenchmarkDashboard = ({ data }) => {
-  console.log('LLMBenchmarkDashboard is rendering with data:', JSON.stringify(data, null, 2));
+  console.log('LLMBenchmarkDashboard is rendering with data:', data);
 
   if (!data || !data.benchmarks || data.benchmarks.length === 0) {
     console.log('No data available for LLMBenchmarkDashboard');
@@ -17,12 +17,12 @@ const LLMBenchmarkDashboard = ({ data }) => {
         benchmark.data.forEach(item => {
           const existingItem = acc.find(accItem => accItem.date === item.date && accItem.openClosed === item.openClosed);
           if (existingItem) {
-            existingItem.normalizedScores.push(item.score);
+            existingItem.normalizedScores.push(item.normalizedScore);
           } else {
             acc.push({
               date: item.date,
               openClosed: item.openClosed,
-              normalizedScores: [item.score]
+              normalizedScores: [item.normalizedScore]
             });
           }
         });
@@ -30,21 +30,23 @@ const LLMBenchmarkDashboard = ({ data }) => {
       }, []).map(item => ({
         date: item.date,
         openClosed: item.openClosed,
-        score: (item.normalizedScores.reduce((a, b) => a + b, 0) / item.normalizedScores.length)
+        score: (item.normalizedScores.reduce((a, b) => a + b, 0) / item.normalizedScores.length) * 100 // Scale to 0-100
       }))
     }]
   };
 
-  console.log('Processed averageData:', JSON.stringify(averageData, null, 2));
+  console.log('Processed averageData:', averageData);
 
   return (
     <div className="flex flex-col space-y-8">
       <div id="average-graph">
-        <LLMBenchmarkVisualisation data={averageData} isAverage={false} />
+        <LLMBenchmarkVisualisation data={averageData} />
       </div>
       {data.benchmarks.map((benchmark, index) => (
         <div id={`graph-${index}`} key={index}>
-          <LLMBenchmarkVisualisation data={{ benchmarks: [benchmark] }} />
+          <LLMBenchmarkVisualisation
+            data={{ benchmarks: [benchmark] }}
+          />
         </div>
       ))}
     </div>

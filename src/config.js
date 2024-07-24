@@ -1,6 +1,6 @@
 const config = {
-  predictionMonths: 6,
-  trendDataPoints: 12,
+  predictionMonths: 12,
+  trendDataPoints: 8,
   openColor: 'rgb(75, 192, 192)',
   closedColor: 'rgb(255, 99, 132)',
   legendPosition: 'top',
