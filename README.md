@@ -6,6 +6,8 @@
 
 This project is designed to visualise and track the performance of various Large Language Models (LLMs) across different benchmarks. The visualisations aim help in understanding trends, comparing models, and predicting future performances.
 
+![screenshot](screenshot.jpg)
+
 ## Features
 
 - **Data Entry**: Easily add new benchmark data for models.
