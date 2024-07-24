@@ -51,20 +51,22 @@ The project is structured as follows:
     - `LLMBenchmarkVisualisation.js`: Component to visualise benchmark data using ChartJS.
     - `LLMBenchmarkDashboard.js`: Dashboard to display benchmark data and predictions.
     - `LeftPanel.js`: Side panel to display model information.
-  - **`config.js`**: Configuration settings for the application, including chart colors and titles.
-  - **`App.js`**: Main application component that integrates all other components.
-- **`server.js`**: Express server to serve static files and API endpoints.
-- **`migrate-data.js`**: A script I used to migrate data from JSON to sqlite (no longer in use).
+  - `config.js`: Configuration settings for the application, including chart colors and titles.
+  - `App.js`: Main application component that integrates all other components.
+- `server.js`: Express server to serve static files and API endpoints.
+- **`ingest/`**: Scripts to aid with data ingestion (not used by the app itself).
 - **`package.json`**: Project metadata and scripts.
 - **`llm_bechmarks.db`**: SQLite database to store benchmark data.
 
 ## Usage
 
-1. **Data Entry**: Use the `DataEntryForm` component to add new benchmark data for models. This includes entering dates, selecting models, benchmarks, scores, and whether the model is open or closed.
+1. **GUI Data Entry**: Use the `DataEntryForm` component to add new benchmark data for models. This includes entering dates, selecting models, benchmarks, scores, and whether the model is open or closed.
 
-2. **Visualisation**: The `LLMBenchmarkVisualisation` component provides interactive charts that show the performance of different models over time. Predictions are also provided based on historical data trends.
+2. **CLI Data Entry**: Add correctly formatted JSON benchmark results to `ingest/import.json` and run `node ingest/ingest.js`
 
-3. **Predictive Analysis**: Historical data is used to predict future performances, helping in understanding model growth and potential improvements.
+3. **Visualisation**: The `LLMBenchmarkVisualisation` component provides interactive charts that show the performance of different models over time. Predictions are also provided based on historical data trends.
+
+4. **Predictive Analysis**: Historical data is used to predict future performances, helping in understanding model growth and potential improvements.
 
 ## Contributing
 

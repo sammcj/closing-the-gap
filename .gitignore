@@ -6,3 +6,7 @@
 **/*.log
 build/
 .aider*
+**/import.json
+**/ingest.json
+**/*.bak
+backups/**

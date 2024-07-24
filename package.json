@@ -10,29 +10,30 @@
     "chartjs-plugin-autocolors": "0.2.2",
     "chartjs-plugin-datalabels": "2.2.0",
     "chartjs-plugin-trendline": "2.1.2",
-    "concurrently": "8.2.2",
     "cors": "2.8.5",
     "date-fns": "3.6.0",
-    "express": "^4.19.2",
-    "postcss": "8.4.39",
+    "postcss": "8.4.40",
     "react": "^18.3.1",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "^18.3.1",
-    "react-scripts": "5.0.1",
-    "sqlite": "^5.1.1",
-    "sqlite3": "^5.1.7",
     "tailwindcss": "3.4.6"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^8.2.2",
+    "express": "^4.19.2",
+    "sqlite": "^5.1.1",
+    "react-scripts": "5.0.1",
+    "sqlite3": "5.1.7",
+    "string-similarity": "4.0.4"
   },
   "scripts": {
     "start": "concurrently \"npm run start:react\" \"npm run start:server\"",
-    "start:react": "BROWSER=none react-scripts start",
+    "start:react": "react-scripts start",
     "start:server": "node server.js",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "ingest": "(cd ingest && node ingest.js)"
   },
   "eslintConfig": {
     "extends": [
