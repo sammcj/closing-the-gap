@@ -102,7 +102,7 @@ const LLMBenchmarkVisualisation = ({ data }) => {
         data: [...Array(processedData.labels.length - 1).fill(null), ...processedData.openPredictions],
         borderColor: config.openColor,
         backgroundColor: config.openColor + '80',
-        borderDash: [5, 5],
+        borderDash: [2, 2],
         tension: 0.1,
       },
       {
@@ -110,7 +110,7 @@ const LLMBenchmarkVisualisation = ({ data }) => {
         data: [...Array(processedData.labels.length - 1).fill(null), ...processedData.closedPredictions],
         borderColor: config.closedColor,
         backgroundColor: config.closedColor + '80',
-        borderDash: [5, 5],
+        borderDash: [2, 2],
         tension: 0.1
       }
     ]
@@ -120,7 +120,7 @@ const LLMBenchmarkVisualisation = ({ data }) => {
     responsive: true,
     elements: {
       point: {
-        radius: 3,
+        radius: 2.75,
       },
     },
     plugins: {

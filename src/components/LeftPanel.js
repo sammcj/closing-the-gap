@@ -10,20 +10,24 @@ const LeftPanel = ({ data, onNewData, onDeleteData, onAddBenchmark, onDeleteBenc
   const [selectedBenchmark, setSelectedBenchmark] = useState('');
   const [newBenchmarkName, setNewBenchmarkName] = useState('');
 
-  const explanationText = `We use the last ${config.trendDataPoints} data points to calculate the trend.
-A linear regression is performed on these points to determine the slope and intercept.
+  const explanationText = `Using ${config.trendDataPoints} data points to calculate the trend a linear regression is performed on these points to determine the slope and intercept.
 The trend is then projected forward for ${config.predictionMonths} months.
 Predictions are capped between 0 and 1 to ensure realistic values.
 
 Limitations (many):
+
+- I am bad at math.
+- I am bad at Javascript.
+- I hacked this up late at night.
 - Past performance doesn't guarantee future results.
 - The AI field is rapidly evolving and may not follow linear trends.
 - Breakthroughs or setbacks can significantly alter the trajectory.
-- This simple linear projection doesn't account for potential breakthroughs or plateaus in progress.
+- This simple linear projection doesn't account for potential breakthroughs (and there are many) or plateaus (people keep talking of these but I'm yet to see one).
 
 Interpretation:
 - Use these projections as a general indication of potential progress if current trends continue.
-- Consider them alongside expert analysis and industry developments for a more comprehensive view.`;
+- Consider them alongside expert analysis and industry developments for a more comprehensive view.
+`;
 
   const calculateAverageScores = useCallback(() => {
     if (!data || !data.benchmarks) return [];
