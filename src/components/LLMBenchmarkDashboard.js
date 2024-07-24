@@ -9,20 +9,20 @@ const LLMBenchmarkDashboard = ({ data }) => {
     return <div>No data available</div>;
   }
 
-  // Process data to get normalized average across all benchmarks
+  // Process data to get normalised average across all benchmarks
   const averageData = {
     benchmarks: [{
-      name: "Normalized Average Across All Benchmarks",
+      name: "Normalised Average Across All Benchmarks",
       data: data.benchmarks.reduce((acc, benchmark) => {
         benchmark.data.forEach(item => {
           const existingItem = acc.find(accItem => accItem.date === item.date && accItem.openClosed === item.openClosed);
           if (existingItem) {
-            existingItem.normalizedScores.push(item.normalizedScore);
+            existingItem.normalisedScores.push(item.normalisedScore);
           } else {
             acc.push({
               date: item.date,
               openClosed: item.openClosed,
-              normalizedScores: [item.normalizedScore]
+              normalisedScores: [item.normalisedScore]
             });
           }
         });
@@ -30,7 +30,7 @@ const LLMBenchmarkDashboard = ({ data }) => {
       }, []).map(item => ({
         date: item.date,
         openClosed: item.openClosed,
-        score: (item.normalizedScores.reduce((a, b) => a + b, 0) / item.normalizedScores.length) * 100 // Scale to 0-100
+        score: (item.normalisedScores.reduce((a, b) => a + b, 0) / item.normalisedScores.length) * 100 // Scale to 0-100
       }))
     }]
   };

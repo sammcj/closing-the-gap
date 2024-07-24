@@ -42,18 +42,19 @@ This project is designed to visualise and track the performance of various Large
 
 The project is structured as follows:
 
-- **`public/`**: Static files and JSON data for models, benchmarks, and results.
-  - `models.json`: List of available models with their details.
-  - `benchmarks.json`: List of available benchmarks.
-  - `results.json`: Historical benchmark scores for different models.
+- **`public/`**: Static index.html.
 - **`src/`**: Source code for the application.
   - **`components/`**: Reusable UI components.
     - `DataEntryForm.js`: Form to add new benchmark data.
     - `LLMBenchmarkVisualisation.js`: Component to visualise benchmark data using ChartJS.
+    - `LLMBenchmarkDashboard.js`: Dashboard to display benchmark data and predictions.
+    - `LeftPanel.js`: Side panel to display model information.
   - **`config.js`**: Configuration settings for the application, including chart colors and titles.
   - **`App.js`**: Main application component that integrates all other components.
 - **`server.js`**: Express server to serve static files and API endpoints.
+- **`migrate-data.js`**: A script I used to migrate data from JSON to sqlite (no longer in use).
 - **`package.json`**: Project metadata and scripts.
+- **`llm_bechmarks.db`**: SQLite database to store benchmark data.
 
 ## Usage
 
