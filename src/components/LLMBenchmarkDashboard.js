@@ -42,13 +42,24 @@ const LLMBenchmarkDashboard = ({ data }) => {
       <div id="average-graph">
         <LLMBenchmarkVisualisation data={averageData} />
       </div>
-      {data.benchmarks.map((benchmark, index) => (
-        <div id={`graph-${index}`} key={index}>
-          <LLMBenchmarkVisualisation
-            data={{ benchmarks: [benchmark] }}
-          />
-        </div>
-      ))}
+      <div className="flex flex-wrap">
+        {data.benchmarks.map((benchmark, index) => (
+          <div key={index} className="w-1/2 p-4">
+            <LLMBenchmarkVisualisation
+              data={{ benchmarks: [benchmark] }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-wrap">
+        {data.benchmarks.map((benchmark, index) => (
+          <div key={index} className="w-1/2 p-4">
+            <LLMBenchmarkVisualisation
+              data={{ benchmarks: [{ ...benchmark, data: benchmark.data.map(d => ({ ...d, score: null })) }] }} // Passing empty scores for predictions
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
