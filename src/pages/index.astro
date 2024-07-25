@@ -1,0 +1,178 @@
+---
+// src/pages/index.astro
+import Layout from "../layouts/Layout.astro";
+import Chart from "../components/Chart.astro";
+import SummaryGraph from "../components/SummaryGraph.astro";
+import { getDataFromDB } from "../utils/db";
+import { CONFIG } from "../config";
+
+let data;
+let error;
+
+try {
+  data = getDataFromDB();
+} catch (e) {
+  console.error("Error reading from database:", e);
+  error = e.message;
+}
+
+const processedData = data
+  ? {
+      benchmarks: data.benchmarks
+        .map((benchmark) => {
+          const benchmarkResults = data.results.filter(
+            (result) => result.benchmarkId === benchmark.id
+          );
+
+          if (benchmarkResults.length === 0) return null;
+
+          const scores = benchmarkResults.map((r) => r.score);
+          const min = Math.min(...scores);
+          const max = Math.max(...scores);
+
+          return {
+            name: benchmark.name,
+            min,
+            max,
+            data: benchmarkResults
+              .map((result) => {
+                const model = data.models.find((m) => m.name === result.modelName);
+                return model
+                  ? {
+                      date: result.date,
+                      name: model.name,
+                      openClosed: model.openClosed,
+                      score: result.score,
+                      normalisedScore: (result.score - min) / (max - min),
+                    }
+                  : null;
+              })
+              .filter((item) => item !== null),
+          };
+        })
+        .filter((benchmark) => benchmark !== null && benchmark.data.length > 0),
+    }
+  : null;
+
+// Calculate combined average data
+const combinedData = processedData
+  ? processedData.benchmarks
+      .reduce((acc, benchmark) => {
+        benchmark.data.forEach((dataPoint) => {
+          const existingPoint = acc.find(
+            (p) => p.date === dataPoint.date && p.openClosed === dataPoint.openClosed
+          );
+          if (existingPoint) {
+            existingPoint.score += dataPoint.normalisedScore;
+            existingPoint.count += 1;
+          } else {
+            acc.push({
+              date: dataPoint.date,
+              openClosed: dataPoint.openClosed,
+              score: dataPoint.normalisedScore,
+              count: 1,
+            });
+          }
+        });
+        return acc;
+      }, [])
+      .map((point) => ({
+        date: point.date,
+        openClosed: point.openClosed,
+        score: (point.score / point.count) * 100, // Convert to percentage
+      }))
+  : null;
+
+// Process data for the summary graph
+const summaryData = processedData
+  ? processedData.benchmarks.flatMap((benchmark) =>
+      benchmark.data.map((d) => ({
+        benchmark: benchmark.name,
+        date: d.date,
+        name: d.name,
+        openClosed: d.openClosed,
+        score: d.score,
+      }))
+    )
+  : null;
+
+const benchmarkNames = processedData ? processedData.benchmarks.map((b) => b.name) : [];
+
+console.log("Processed data:", processedData);
+console.log("Combined data:", combinedData);
+console.log("Summary data:", summaryData);
+
+const filteredBenchmarks = processedData
+  ? processedData.benchmarks.filter((benchmark) => benchmark.data.length > 0)
+  : [];
+---
+
+<Layout title="LLM Benchmark Dashboard">
+  <main class="container mx-auto px-4 py-8 max-w-full">
+    <h1 class="text-4xl font-bold mb-8 text-center text-gray-800">LLM Benchmark Dashboard</h1>
+    {
+      error ? (
+        <p class="text-red-500 text-center">Error loading data: {error}</p>
+      ) : filteredBenchmarks && filteredBenchmarks.length > 0 ? (
+        <div class="space-y-12">
+          <div class="bg-white shadow-lg rounded-lg overflow-hidden p-4">
+            <h2 class="text-2xl font-bold mb-4">Benchmark Progress Summary</h2>
+            <SummaryGraph data={summaryData} benchmarks={benchmarkNames} />
+          </div>
+          <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+            <Chart
+              id="combined-chart"
+              title={CONFIG.combinedChartTitle}
+              data={combinedData}
+              isCombined={true}
+            />
+          </div>
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+            {filteredBenchmarks.map((benchmark, index) => (
+              <div class="bg-white shadow-lg rounded-lg overflow-hidden">
+                <Chart id={`chart-${index}`} title={benchmark.name} data={benchmark.data} />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <p class="text-center text-gray-600">
+          No data available to display. Check console for more information.
+        </p>
+      )
+    }
+  </main>
+</Layout>
+
+<style>
+  body {
+    background-color: #f0f4f8;
+  }
+</style>
+
+<script>
+  function lazyLoadCharts() {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const chartElement = entry.target;
+            if (!chartElement.classList.contains("chart-loaded")) {
+              chartElement.classList.add("chart-loaded");
+              const event = new Event("render-chart");
+              chartElement.dispatchEvent(event);
+            }
+            observer.unobserve(chartElement);
+          }
+        });
+      },
+      { rootMargin: "100px" }
+    );
+
+    document.querySelectorAll(".chart").forEach((chart) => {
+      observer.observe(chart);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", lazyLoadCharts);
+</script>

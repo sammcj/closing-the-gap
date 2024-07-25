@@ -1,0 +1,383 @@
+---
+// src/components/Chart.astro
+import { CONFIG } from "../config";
+
+export interface Props {
+  id: string;
+  title: string;
+  data: any;
+  isCombined?: boolean;
+}
+
+const { id, title, data, isCombined = false } = Astro.props;
+---
+
+<div
+  id={id}
+  class="chart"
+  style={`width: 100%; height: ${CONFIG.chartHeight}px;`}
+  data-title={title}
+  data-chart-data={JSON.stringify(data)}
+  data-is-combined={isCombined}
+>
+  <p>Loading chart...</p>
+</div>
+
+<script>
+  import * as echarts from "echarts/core";
+  import { ScatterChart, LineChart } from "echarts/charts";
+  import {
+    TitleComponent,
+    TooltipComponent,
+    GridComponent,
+    DatasetComponent,
+    TransformComponent,
+    LegendComponent,
+    ToolboxComponent,
+    DataZoomComponent,
+  } from "echarts/components";
+  import { LabelLayout, UniversalTransition } from "echarts/features";
+  import { CanvasRenderer } from "echarts/renderers";
+  import { CONFIG } from "../config";
+  import dayjs from "dayjs";
+
+  echarts.use([
+    TitleComponent,
+    TooltipComponent,
+    GridComponent,
+    DatasetComponent,
+    TransformComponent,
+    LegendComponent,
+    ToolboxComponent,
+    DataZoomComponent,
+    ScatterChart,
+    LineChart,
+    LabelLayout,
+    UniversalTransition,
+    CanvasRenderer,
+  ]);
+
+  function calculateTrendAndPrediction(data, isOpen) {
+    if (!data || data.length === 0) {
+      console.warn("Empty or invalid data passed to calculateTrendAndPrediction");
+      return {
+        trendData: [],
+        predictionData: [],
+        color: isOpen ? CONFIG.openColor : CONFIG.closedColor,
+        predictionColor: isOpen ? CONFIG.predictiveOpenColor : CONFIG.predictiveClosedColor,
+      };
+    }
+
+    const sortedData = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const trendData = [];
+    let maxScore = -Infinity;
+
+    sortedData.forEach((point) => {
+      if (point.score > maxScore) {
+        maxScore = point.score;
+        trendData.push([point.date, maxScore]);
+      }
+    });
+
+    if (trendData.length === 0) {
+      console.warn("No trend data could be calculated");
+      return {
+        trendData: [],
+        predictionData: [],
+        color: isOpen ? CONFIG.openColor : CONFIG.closedColor,
+        predictionColor: isOpen ? CONFIG.predictiveOpenColor : CONFIG.predictiveClosedColor,
+      };
+    }
+
+    // Calculate the rate of improvement
+    const cutoffDate = dayjs(trendData[trendData.length - 1][0]).subtract(
+      CONFIG.improvementCalculationMonths,
+      "month"
+    );
+    const recentData = trendData.filter((point) => dayjs(point[0]).isAfter(cutoffDate));
+
+    if (recentData.length < 2) {
+      console.warn("Not enough recent data to calculate improvement rate");
+      return {
+        trendData,
+        predictionData: [],
+        color: isOpen ? CONFIG.openColor : CONFIG.closedColor,
+        predictionColor: isOpen ? CONFIG.predictiveOpenColor : CONFIG.predictiveClosedColor,
+      };
+    }
+
+    const firstRecentDate = dayjs(recentData[0][0]);
+    const lastRecentDate = dayjs(recentData[recentData.length - 1][0]);
+    const monthsDiff = lastRecentDate.diff(firstRecentDate, "month", true);
+    const scoreImprovement = recentData[recentData.length - 1][1] - recentData[0][1];
+    const monthlyImprovement = scoreImprovement / monthsDiff;
+
+    // Generate prediction data
+    const predictionData = [];
+    let currentDate = lastRecentDate;
+    let currentScore = recentData[recentData.length - 1][1];
+
+    for (let i = 0; i <= CONFIG.predictionMonths; i++) {
+      predictionData.push([currentDate.format(CONFIG.dateFormat), currentScore]);
+      currentDate = currentDate.add(1, "month");
+      currentScore += monthlyImprovement;
+    }
+
+    return {
+      trendData,
+      predictionData,
+      color: isOpen ? CONFIG.openColor : CONFIG.closedColor,
+      predictionColor: isOpen ? CONFIG.predictiveOpenColor : CONFIG.predictiveClosedColor,
+    };
+  }
+
+  function renderChart(element) {
+    const id = element.id;
+    const title = element.getAttribute("data-title");
+    const isCombined = element.getAttribute("data-is-combined") === "true";
+    let data;
+    try {
+      data = JSON.parse(element.getAttribute("data-chart-data"));
+    } catch (error) {
+      console.error(`Failed to parse data for chart ${id}:`, error);
+      element.innerHTML = `<p>Error: Failed to load chart data</p>`;
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      console.warn(`No data available for chart ${id}`);
+      element.innerHTML = `<p>No data available for this chart</p>`;
+      return;
+    }
+
+    const chart = echarts.init(element);
+
+    const openData = data.filter((d) => d.openClosed === "Open");
+    const closedData = data.filter((d) => d.openClosed === "Closed");
+
+    const openTrend = calculateTrendAndPrediction(openData, true);
+    const closedTrend = calculateTrendAndPrediction(closedData, false);
+
+    const option = {
+      title: {
+        text: title,
+        left: "center",
+        textStyle: {
+          fontSize: 20,
+          fontWeight: "bold",
+        },
+      },
+      tooltip: {
+        trigger: "item",
+        formatter: function (params) {
+          if (params.seriesName === "Open" || params.seriesName === "Closed") {
+            const date = dayjs(params.data[0]).format(CONFIG.dateFormat);
+            const modelName = params.data[2];
+            const score = params.data[1].toFixed(2);
+            const color = params.seriesName === "Open" ? CONFIG.openColor : CONFIG.closedColor;
+            return `<span style="color:${color}">${modelName}</span><br/>Date: ${date}<br/>Score: ${score}`;
+          }
+          return params.seriesName;
+        },
+      },
+      legend: {
+        data: [
+          "Open",
+          "Closed",
+          "Open Trend",
+          "Closed Trend",
+          "Open Prediction",
+          "Closed Prediction",
+        ],
+        bottom: 10,
+      },
+      grid: {
+        left: "5%",
+        right: "5%",
+        bottom: "15%",
+        containLabel: true,
+      },
+      toolbox: {
+        feature: {
+          saveAsImage: {},
+        },
+      },
+      dataZoom: [
+        {
+          type: "inside",
+          start: 0,
+          end: 100,
+        },
+        {
+          start: 0,
+          end: 100,
+        },
+      ],
+      xAxis: {
+        type: "time",
+        boundaryGap: false,
+        axisLabel: {
+          formatter: (value) => dayjs(value).format(CONFIG.dateFormat),
+        },
+      },
+      yAxis: {
+        type: "value",
+        boundaryGap: [0, "20%"],
+        axisLabel: {
+          formatter: "{value}%",
+        },
+      },
+      series: [
+        {
+          name: "Open",
+          type: "scatter",
+          data: openData.map((d) => [d.date, d.score, d.name]),
+          symbolSize: 8,
+          itemStyle: {
+            color: CONFIG.openColor,
+          },
+        },
+        {
+          name: "Closed",
+          type: "scatter",
+          data: closedData.map((d) => [d.date, d.score, d.name]),
+          symbolSize: 8,
+          itemStyle: {
+            color: CONFIG.closedColor,
+          },
+        },
+        {
+          name: "Open Trend",
+          type: "line",
+          data: openTrend.trendData,
+          symbolSize: 2,
+          smooth: true,
+          lineStyle: {
+            width: 4,
+            color: openTrend.color,
+          },
+        },
+        {
+          name: "Closed Trend",
+          type: "line",
+          data: closedTrend.trendData,
+          symbolSize: 2,
+          smooth: true,
+          lineStyle: {
+            width: 4,
+            color: closedTrend.color,
+          },
+        },
+        {
+          name: "Open Prediction",
+          type: "line",
+          data: openTrend.predictionData,
+          symbolSize: 0,
+          smooth: true,
+          lineStyle: {
+            width: 2,
+            color: openTrend.predictionColor,
+            type: "dashed",
+          },
+        },
+        {
+          name: "Closed Prediction",
+          type: "line",
+          data: closedTrend.predictionData,
+          symbolSize: 0,
+          smooth: true,
+          lineStyle: {
+            width: 2,
+            color: closedTrend.predictionColor,
+            type: "dashed",
+          },
+        },
+      ],
+    };
+
+    if (isCombined) {
+      // Modify the series for the combined chart
+      option.series = [
+        {
+          name: "Open Trend",
+          type: "line",
+          data: openTrend.trendData,
+          symbolSize: 0,
+          smooth: true,
+          lineStyle: {
+            width: 3,
+            color: openTrend.color,
+          },
+        },
+        {
+          name: "Closed Trend",
+          type: "line",
+          data: closedTrend.trendData,
+          symbolSize: 0,
+          smooth: true,
+          lineStyle: {
+            width: 3,
+            color: closedTrend.color,
+          },
+        },
+        {
+          name: "Open Prediction",
+          type: "line",
+          data: openTrend.predictionData,
+          symbolSize: 0,
+          lineStyle: {
+            width: 2,
+            color: openTrend.predictionColor,
+            type: "dashed",
+          },
+        },
+        {
+          name: "Closed Prediction",
+          type: "line",
+          data: closedTrend.predictionData,
+          symbolSize: 0,
+          lineStyle: {
+            width: 2,
+            color: closedTrend.predictionColor,
+            type: "dashed",
+          },
+        },
+      ];
+
+      // Add a vertical line to separate real data from predictions
+      if (openTrend.trendData.length > 0) {
+        const lastRealDate = openTrend.trendData[openTrend.trendData.length - 1][0];
+        option.series.push({
+          name: "Prediction Start",
+          type: "line",
+          markLine: {
+            silent: true,
+            lineStyle: {
+              color: "#333",
+            },
+            data: [
+              {
+                xAxis: lastRealDate,
+              },
+            ],
+            label: {
+              formatter: "Prediction Start",
+            },
+          },
+        });
+      }
+    }
+
+    chart.setOption(option);
+    console.log(`Chart ${id} rendered successfully`);
+
+    window.addEventListener("resize", () => {
+      chart.resize();
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const charts = document.querySelectorAll(".chart");
+    charts.forEach(renderChart);
+  });
+</script>
