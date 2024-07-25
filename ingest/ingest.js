@@ -1,6 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs').promises;
 const path = require('path');
+// @ts-ignore
 const stringSimilarity = require('string-similarity');
 const readline = require('readline');
 
@@ -32,7 +33,6 @@ function normaliseDate(date) {
   }
   throw new Error(`Unrecognised date format: ${date}`);
 }
-
 
 function validateData(data) {
   const requiredKeys = ['date', 'modelName', 'benchmarkId', 'score', 'openClosed'];
@@ -89,6 +89,117 @@ async function promptUser(question) {
   });
 }
 
+async function checkExistingResult(db, date, modelName, benchmarkId) {
+  return new Promise((resolve, reject) => {
+    db.get(
+      'SELECT * FROM results WHERE date = ? AND modelName = ? AND benchmarkId = ?',
+      [date, modelName, benchmarkId],
+      (err, row) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(row);
+        }
+      }
+    );
+  });
+}
+
+async function previewChanges(db, data) {
+  const changes = {
+    newBenchmarks: [],
+    newModels: [],
+    newResults: [],
+    updatedResults: []
+  };
+
+  for (const item of data) {
+    const normalisedName = normaliseModelName(item.modelName);
+    const similarModel = await findSimilarModel(db, normalisedName);
+    const finalModelName = similarModel || normalisedName;
+    const normalisedDate = normaliseDate(item.date);
+
+    // Check if benchmark exists
+    const benchmarkExists = await new Promise((resolve) => {
+      // @ts-ignore
+      db.get('SELECT id FROM benchmarks WHERE id = ?', [item.benchmarkId], (err, row) => {
+        resolve(!!row);
+      });
+    });
+    if (!benchmarkExists) {
+      // @ts-ignore
+      changes.newBenchmarks.push(item.benchmarkId);
+    }
+
+    // Check if model exists
+    const modelExists = await new Promise((resolve) => {
+      // @ts-ignore
+      db.get('SELECT name FROM models WHERE name = ?', [finalModelName], (err, row) => {
+        resolve(!!row);
+      });
+    });
+    if (!modelExists) {
+      // @ts-ignore
+      changes.newModels.push(finalModelName);
+    }
+
+    // Check if result exists
+    const existingResult = await checkExistingResult(db, normalisedDate, finalModelName, item.benchmarkId);
+    if (!existingResult) {
+      // @ts-ignore
+      changes.newResults.push({
+        date: normalisedDate,
+        modelName: finalModelName,
+        benchmarkId: item.benchmarkId,
+        score: item.score
+      });
+    } else if (existingResult.score !== item.score) {
+      // @ts-ignore
+      changes.updatedResults.push({
+        date: normalisedDate,
+        modelName: finalModelName,
+        benchmarkId: item.benchmarkId,
+        oldScore: existingResult.score,
+        newScore: item.score
+      });
+    }
+  }
+
+  return changes;
+}
+
+function displayChanges(changes) {
+  console.log('\nPreview of changes:');
+
+  if (changes.newBenchmarks.length > 0) {
+    console.log('\nNew benchmarks to be added:');
+    changes.newBenchmarks.forEach(benchmark => console.log(`- ${benchmark}`));
+  }
+
+  if (changes.newModels.length > 0) {
+    console.log('\nNew models to be added:');
+    changes.newModels.forEach(model => console.log(`- ${model}`));
+  }
+
+  if (changes.newResults.length > 0) {
+    console.log('\nNew results to be added:');
+    changes.newResults.forEach(result =>
+      console.log(`- ${result.date}: ${result.modelName} - ${result.benchmarkId}: ${result.score}`)
+    );
+  }
+
+  if (changes.updatedResults.length > 0) {
+    console.log('\nResults to be updated:');
+    changes.updatedResults.forEach(result =>
+      console.log(`- ${result.date}: ${result.modelName} - ${result.benchmarkId}: ${result.oldScore} -> ${result.newScore}`)
+    );
+  }
+
+  if (changes.newBenchmarks.length === 0 && changes.newModels.length === 0 &&
+    changes.newResults.length === 0 && changes.updatedResults.length === 0) {
+    console.log('No changes to be made.');
+  }
+}
 
 async function checkNewBenchmarks(db, data) {
   return /** @type {Promise<void>} */(new Promise((resolve, reject) => {
@@ -131,28 +242,23 @@ async function checkNewBenchmarks(db, data) {
   }));
 }
 
-async function checkExistingResult(db, date, modelName, benchmarkId) {
-  return new Promise((resolve, reject) => {
-    db.get(
-      'SELECT * FROM results WHERE date = ? AND modelName = ? AND benchmarkId = ?',
-      [date, modelName, benchmarkId],
-      (err, row) => {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(row);
-        }
-      }
-    );
-  });
-}
-
 async function ingestData(dbPath, data) {
   let db;
   try {
     validateData(data);
     await backupDatabase(dbPath);
     db = new sqlite3.Database(dbPath);
+
+    // Preview changes
+    const changes = await previewChanges(db, data);
+    displayChanges(changes);
+
+    // Ask for user confirmation
+    const proceed = await promptUser('\nDo you want to proceed with these changes? (yes/no): ');
+    if (proceed.toLowerCase() !== 'yes') {
+      console.log('Operation cancelled by user.');
+      return;
+    }
 
     await /** @type {Promise<void>} */(new Promise((resolve, reject) => {
       db.run('BEGIN TRANSACTION', (err) => {
@@ -251,7 +357,6 @@ async function ingestData(dbPath, data) {
         }
       });
     }));
-
     verifyInsertedData(db)
   } catch (error) {
     console.error('Error ingesting data:', error);
