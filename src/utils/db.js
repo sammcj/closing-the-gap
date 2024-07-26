@@ -7,7 +7,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export function getDataFromDB() {
-  const dbPath = path.join(__dirname, '..', '..', 'llm_benchmarks.db');
+  const dbPath = path.join(__dirname, '..', '..', 'data/llm_benchmarks.db');
   console.log('Database path:', dbPath);
 
   let db;
