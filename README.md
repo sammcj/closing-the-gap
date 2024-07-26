@@ -2,6 +2,10 @@
 
 TODO - rewrite this from main with new details
 
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sammcj/closing-the-gap/tree/rewrite)
+[![Open with CodeSandbox](https://assets.codesandbox.io/github/button-edit-lime.svg)](https://codesandbox.io/p/sandbox/github/sammcj/closing-the-gap/tree/rewrite)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/sammcj/closing-the-gap?devcontainer_path=.devcontainer/minimal/devcontainer.json)
+
 ## 🚀 Quick start
 
 ```sh
