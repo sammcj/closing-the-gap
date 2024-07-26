@@ -10,7 +10,6 @@ export default defineConfig({
       syntaxHighlight: 'shiki',
       shikiConfig: { theme: 'dracula' },
       remarkPlugins: [remarkToc],
-      // rehypePlugins: [rehypeMinifyHtml],
       remarkRehype: { footnoteLabel: 'Footnotes' },
       gfm: false,
     }),

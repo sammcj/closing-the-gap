@@ -102,6 +102,7 @@ console.log("Processed data:", processedData);
 console.log("Combined data:", combinedData);
 console.log("Summary data:", summaryData);
 
+// Filter out benchmarks without data
 const filteredBenchmarks = processedData
   ? processedData.benchmarks.filter((benchmark) => benchmark.data.length > 0)
   : [];
@@ -113,7 +114,7 @@ const filteredBenchmarks = processedData
     {
       error ? (
         <p class="text-red-500 text-center">Error loading data: {error}</p>
-      ) : filteredBenchmarks && filteredBenchmarks.length > 0 ? (
+      ) : filteredBenchmarks.length > 0 ? (
         <div class="space-y-12">
           <div class="bg-white shadow-lg rounded-lg overflow-hidden p-4">
             <h2 class="text-2xl font-bold mb-4">Benchmark Progress Summary</h2>
@@ -127,7 +128,7 @@ const filteredBenchmarks = processedData
               isCombined={true}
             />
           </div>
-          <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {filteredBenchmarks.map((benchmark, index) => (
               <div class="bg-white shadow-lg rounded-lg overflow-hidden">
                 <Chart id={`chart-${index}`} title={benchmark.name} data={benchmark.data} />
@@ -174,5 +175,27 @@ const filteredBenchmarks = processedData
     });
   }
 
-  document.addEventListener("DOMContentLoaded", lazyLoadCharts);
+  function exportData() {
+    const combinedChartElement = document.getElementById("combined-chart") as HTMLElement;
+    const data = {
+      combinedData: JSON.parse(combinedChartElement.dataset.chartData || "[]"),
+      benchmarkData: Array.from(document.querySelectorAll<HTMLElement>(".chart")).map((chart) => ({
+        name: chart.dataset.title,
+        data: JSON.parse(chart.dataset.chartData || "[]"),
+      })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "llm_benchmark_data.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    lazyLoadCharts;
+
+    document.getElementById("export-data")?.addEventListener("click", exportData);
+  });
 </script>
