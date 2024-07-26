@@ -12,16 +12,87 @@ export interface Props {
 const { id, title, data, isCombined = false } = Astro.props;
 ---
 
-<div
-  id={id}
-  class="chart"
-  style={`width: 100%; height: ${CONFIG.chartHeight}px;`}
-  data-title={title}
-  data-chart-data={JSON.stringify(data)}
-  data-is-combined={isCombined}
->
-  <p>Loading chart...</p>
+<div class="chart-container">
+  <div
+    id={id}
+    class="chart"
+    style={`width: 100%; height: ${CONFIG.chartHeight}px;`}
+    data-title={title}
+    data-chart-data={JSON.stringify(data)}
+    data-is-combined={isCombined}
+  >
+    <p>Loading chart...</p>
+  </div>
+  <div class="collapsible-table" data-chart-id={id}>
+    <button class="toggle-table">Show Data</button>
+    <div class="table-container hidden">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Model Name</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            data.map((item) => (
+              <tr>
+                <td>{item.date}</td>
+                <td>{item.name}</td>
+                <td>{item.score.toFixed(2)}%</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
+
+<style>
+  .chart-container {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
+  }
+  .chart-container:hover {
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+  }
+  .collapsible-table {
+    padding: 1rem;
+  }
+  .toggle-table {
+    width: 100%;
+    padding: 0.5rem;
+    background-color: #f0f0f0;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+  }
+  .table-container {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th,
+  td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+  }
+  .hidden {
+    display: none;
+  }
+</style>
 
 <script>
   import * as echarts from "echarts/core";
@@ -68,14 +139,35 @@ const { id, title, data, isCombined = false } = Astro.props;
       };
     }
 
-    const sortedData = data.sort((a, b) => new Date(a.date) - new Date(b.date));
+    const sortedData = data.sort((a, b) => dayjs(a.date).valueOf() - dayjs(b.date).valueOf());
+
+    // If there's only one data point, create a horizontal trend line and prediction
+    if (sortedData.length === 1) {
+      const point = sortedData[0];
+      const date = dayjs(point.date).valueOf();
+      const futureDate = dayjs(point.date).add(CONFIG.predictionMonths, "month").valueOf();
+      return {
+        trendData: [
+          [date, point.score],
+          [date + 86400000, point.score],
+        ], // Add 24 hours for visibility
+        predictionData: [
+          [date, point.score],
+          [futureDate, point.score],
+        ], // Horizontal prediction
+        color: isOpen ? CONFIG.openColor : CONFIG.closedColor,
+        predictionColor: isOpen ? CONFIG.predictiveOpenColor : CONFIG.predictiveClosedColor,
+      };
+    }
+
+    // Original trend calculation for multiple data points
     const trendData = [];
     let maxScore = -Infinity;
 
     sortedData.forEach((point) => {
       if (point.score > maxScore) {
         maxScore = point.score;
-        trendData.push([point.date, maxScore]);
+        trendData.push([dayjs(point.date).valueOf(), maxScore]);
       }
     });
 
@@ -97,10 +189,15 @@ const { id, title, data, isCombined = false } = Astro.props;
     const recentData = trendData.filter((point) => dayjs(point[0]).isAfter(cutoffDate));
 
     if (recentData.length < 2) {
-      console.warn("Not enough recent data to calculate improvement rate");
+      // Not enough data for prediction, return horizontal prediction
+      const lastPoint = trendData[trendData.length - 1];
+      const futureDate = dayjs(lastPoint[0]).add(CONFIG.predictionMonths, "month").valueOf();
       return {
         trendData,
-        predictionData: [],
+        predictionData: [
+          [lastPoint[0], lastPoint[1]],
+          [futureDate, lastPoint[1]],
+        ],
         color: isOpen ? CONFIG.openColor : CONFIG.closedColor,
         predictionColor: isOpen ? CONFIG.predictiveOpenColor : CONFIG.predictiveClosedColor,
       };
@@ -118,7 +215,7 @@ const { id, title, data, isCombined = false } = Astro.props;
     let currentScore = recentData[recentData.length - 1][1];
 
     for (let i = 0; i <= CONFIG.predictionMonths; i++) {
-      predictionData.push([currentDate.format(CONFIG.dateFormat), currentScore]);
+      predictionData.push([currentDate.valueOf(), currentScore]);
       currentDate = currentDate.add(1, "month");
       currentScore += monthlyImprovement;
     }
@@ -216,13 +313,12 @@ const { id, title, data, isCombined = false } = Astro.props;
       xAxis: {
         type: "time",
         boundaryGap: false,
-        axisLabel: {
-          formatter: (value) => dayjs(value).format(CONFIG.dateFormat),
-        },
       },
       yAxis: {
         type: "value",
-        boundaryGap: [0, "20%"],
+        min: "dataMin",
+        max: "dataMax",
+        boundaryGap: [0, "10%"],
         axisLabel: {
           formatter: "{value}%",
         },
@@ -231,7 +327,7 @@ const { id, title, data, isCombined = false } = Astro.props;
         {
           name: "Open",
           type: "scatter",
-          data: openData.map((d) => [d.date, d.score, d.name]),
+          data: openData.map((d) => [dayjs(d.date).valueOf(), d.score, d.name]),
           symbolSize: 8,
           itemStyle: {
             color: CONFIG.openColor,
@@ -240,7 +336,7 @@ const { id, title, data, isCombined = false } = Astro.props;
         {
           name: "Closed",
           type: "scatter",
-          data: closedData.map((d) => [d.date, d.score, d.name]),
+          data: closedData.map((d) => [dayjs(d.date).valueOf(), d.score, d.name]),
           symbolSize: 8,
           itemStyle: {
             color: CONFIG.closedColor,
@@ -369,7 +465,7 @@ const { id, title, data, isCombined = false } = Astro.props;
     }
 
     chart.setOption(option);
-    console.log(`Chart ${id} rendered successfully`);
+    console.log(`Chart ${id} rendered with data:`, data);
 
     window.addEventListener("resize", () => {
       chart.resize();
@@ -379,5 +475,20 @@ const { id, title, data, isCombined = false } = Astro.props;
   document.addEventListener("DOMContentLoaded", () => {
     const charts = document.querySelectorAll(".chart");
     charts.forEach(renderChart);
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const tables = document.querySelectorAll(".collapsible-table");
+    tables.forEach((table) => {
+      const toggleBtn = table.querySelector(".toggle-table");
+      const tableContainer = table.querySelector(".table-container");
+
+      toggleBtn.addEventListener("click", () => {
+        tableContainer.classList.toggle("hidden");
+        toggleBtn.textContent = tableContainer.classList.contains("hidden")
+          ? "Show Data"
+          : "Hide Data";
+      });
+    });
   });
 </script>
