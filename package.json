@@ -16,6 +16,7 @@
     "astro": "4.12.2",
     "autoprefixer": "10.4.19",
     "better-sqlite3": "11.1.2",
+    "sqlite3": "5.1.7",
     "dayjs": "1.11.12",
     "echarts": "5.5.1",
     "postcss": "8.4.40",
