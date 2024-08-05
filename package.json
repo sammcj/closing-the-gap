@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "autoprefixer": "10.4.19",
+    "autoprefixer": "10.4.20",
     "chart.js": "4.4.3",
     "chartjs-adapter-date-fns": "3.0.0",
     "chartjs-plugin-annotation": "3.0.1",
