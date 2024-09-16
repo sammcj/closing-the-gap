@@ -9,7 +9,7 @@
     "chartjs-plugin-annotation": "3.0.1",
     "chartjs-plugin-autocolors": "0.2.2",
     "chartjs-plugin-datalabels": "2.2.0",
-    "chartjs-plugin-trendline": "2.1.3",
+    "chartjs-plugin-trendline": "2.1.4",
     "cors": "2.8.5",
     "date-fns": "3.6.0",
     "postcss": "8.4.40",
